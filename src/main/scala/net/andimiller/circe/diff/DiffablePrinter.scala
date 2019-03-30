@@ -43,39 +43,54 @@ object DiffablePrinter extends IOApp {
         Stream.emit(Print(value.toString))
       override def onString(value: String): Stream[F, PrinterAction] =
         Stream.emit(Print("\"" + value + "\""))
-      override def onArray(value: Vector[Json]): Stream[F, PrinterAction] = {
-        Stream.emit(Print("[")) ++
-          Stream.emit(Indent) ++
-          Stream.emit(Newline) ++
+      override def onArray(value: Vector[Json]): Stream[F, PrinterAction] =
+        List(
+          Stream.emits(List(
+            Print("["),
+            Indent,
+            Newline
+          )),
           Stream
             .emits(value)
             .flatMap(
-              _.foldWith(folder[F]) ++ Stream.emit(Print(",")) ++ Stream.emit(Newline)
-            ) ++
-          Stream.emit(Trim) ++
-          Stream.emit(Unindent) ++
-          Stream.emit(Newline) ++
-          Stream.emit(Print("]"))
-      }
-      override def onObject(value: JsonObject): Stream[F, PrinterAction] = {
-        Stream.emit(Print("{")) ++
-          Stream.emit(Indent) ++
-          Stream.emit(Newline) ++
+              _.foldWith(folder[F]) ++ Stream.emit(Print(",")) ++ Stream.emit(
+                Newline)
+            ),
+          Stream.emits(List(
+            Trim,
+            Unindent,
+            Newline,
+            Print("]")
+          )),
+        ).combineAll
+      override def onObject(value: JsonObject): Stream[F, PrinterAction] =
+        List(
+          Stream.emits(List(Print("{"), Indent, Newline)),
           Stream.emits(value.toList.sortBy(_._1)).flatMap {
             case (k, v) =>
-              Stream.emit(Print(s""""$k":""")) ++
-                Stream.emit(Indent) ++
-                Stream.emit(Newline) ++
-                v.foldWith(folder[F]) ++
-                Stream.emit(Print(",")) ++
-                Stream.emit(Unindent) ++
-                Stream.emit(Newline)
-          } ++
-          Stream.emit(Trim) ++
-          Stream.emit(Unindent) ++
-          Stream.emit(Newline) ++
-          Stream.emit(Print("}"))
-      }
+              List(
+                Stream.emits(
+                  List(
+                    Print(s""""$k":"""),
+                    Indent,
+                    Newline
+                  )),
+                v.foldWith(folder[F]),
+                Stream.emits(
+                  List(
+                    Print(","),
+                    Unindent,
+                    Newline
+                  ))
+              ).combineAll
+          },
+          Stream.emits(List(
+            Trim,
+            Unindent,
+            Newline,
+            Print("}")
+          )),
+        ).combineAll
     }
 
   def print(j: Json) = j.foldWith(folder[IO])

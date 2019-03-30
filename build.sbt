@@ -15,3 +15,5 @@ libraryDependencies ++= Seq(
 
 
 scalacOptions += "-Ypartial-unification"
+
+enablePlugins(JmhPlugin)
