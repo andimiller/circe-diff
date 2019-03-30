@@ -11,7 +11,7 @@ object DiffablePrinter extends IOApp {
   case object Indent extends PrinterAction
   case object Unindent extends PrinterAction
   case class Print(s: String) extends PrinterAction
-  case class Newline(s: String = "") extends PrinterAction
+  case object Newline extends PrinterAction
   case object Trim extends PrinterAction
 
   case class Interpreter(indent: Int = 0, buffer: String = "")
@@ -23,9 +23,9 @@ object DiffablePrinter extends IOApp {
           case Indent   => interpreter.copy(indent = interpreter.indent + 1)
           case Unindent => interpreter.copy(indent = interpreter.indent - 1)
           case Print(s) => interpreter.copy(buffer = interpreter.buffer + s)
-          case Newline(s) =>
+          case Newline =>
             interpreter.copy(
-              buffer = interpreter.buffer + s + "\n" + ("  " * interpreter.indent))
+              buffer = interpreter.buffer + "\n" + ("  " * interpreter.indent))
           case Trim => interpreter.copy(buffer = interpreter.buffer.trim)
         }
     }
@@ -46,34 +46,34 @@ object DiffablePrinter extends IOApp {
       override def onArray(value: Vector[Json]): Stream[F, PrinterAction] = {
         Stream.emit(Print("[")) ++
           Stream.emit(Indent) ++
-          Stream.emit(Newline()) ++
+          Stream.emit(Newline) ++
           Stream
             .emits(value)
             .flatMap(
-              _.foldWith(folder[F]) ++ Stream.emit(Newline(","))
+              _.foldWith(folder[F]) ++ Stream.emit(Print(",")) ++ Stream.emit(Newline)
             ) ++
           Stream.emit(Trim) ++
           Stream.emit(Unindent) ++
-          Stream.emit(Newline()) ++
+          Stream.emit(Newline) ++
           Stream.emit(Print("]"))
       }
       override def onObject(value: JsonObject): Stream[F, PrinterAction] = {
         Stream.emit(Print("{")) ++
           Stream.emit(Indent) ++
-          Stream.emit(Newline()) ++
+          Stream.emit(Newline) ++
           Stream.emits(value.toList.sortBy(_._1)).flatMap {
             case (k, v) =>
               Stream.emit(Print(s""""$k":""")) ++
                 Stream.emit(Indent) ++
-                Stream.emit(Newline()) ++
+                Stream.emit(Newline) ++
                 v.foldWith(folder[F]) ++
                 Stream.emit(Print(",")) ++
                 Stream.emit(Unindent) ++
-                Stream.emit(Newline())
+                Stream.emit(Newline)
           } ++
           Stream.emit(Trim) ++
           Stream.emit(Unindent) ++
-          Stream.emit(Newline()) ++
+          Stream.emit(Newline) ++
           Stream.emit(Print("}"))
       }
     }
