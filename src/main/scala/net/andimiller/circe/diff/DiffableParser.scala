@@ -6,7 +6,7 @@ import cats._
 import cats.implicits._
 import io.circe.Json
 
-object DiffableParser extends App {
+object DiffableParser {
 
   lazy val json: Parser[Json] = jstring | jnull | jnumber | jarray | jobject
   val jstring = stringLiteral.map(Json.fromString)
@@ -22,7 +22,7 @@ object DiffableParser extends App {
     key <- stringLiteral <* skipWhitespace
     _ <- char(':') <* skipWhitespace
     value <- json <* skipWhitespace
-    _ <- opt((char(',') <* skipWhitespace))
+    _ <- opt(char(',') <* skipWhitespace)
   } yield key -> value
 
   val jobject = for {
@@ -31,8 +31,5 @@ object DiffableParser extends App {
     _ <- char('}') <* skipWhitespace
   } yield Json.obj(kvs: _*)
 
-  val input = "[1,2,3,4,]"
-
-  println(json.parse(input).done)
-
+  def parse(s: String): ParseResult[Json] = json.parseOnly(s).done
 }

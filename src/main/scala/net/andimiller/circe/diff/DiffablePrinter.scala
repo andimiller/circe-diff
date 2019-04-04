@@ -3,9 +3,11 @@ package net.andimiller.circe.diff
 import io.circe.{Json, JsonNumber, JsonObject}
 import io.circe.Json.Folder
 import fs2._
-import cats._, cats.implicits._, cats.effect._
+import cats._
+import cats.effect.{IO, Sync}
+import cats.implicits._
 
-object DiffablePrinter extends IOApp {
+object DiffablePrinter {
 
   sealed trait PrinterAction
   case object Indent extends PrinterAction
@@ -16,7 +18,7 @@ object DiffablePrinter extends IOApp {
 
   case class Interpreter(indent: Int = 0, buffer: String = "")
 
-  def go[F[_]: Sync](events: Stream[F, PrinterAction]) = {
+  def go[F[_]](events: Stream[IO, PrinterAction]) = {
     events.fold(new Interpreter) {
       case (interpreter, action) =>
         action match {
@@ -52,10 +54,12 @@ object DiffablePrinter extends IOApp {
           )),
           Stream
             .emits(value)
-            .flatMap(
-              _.foldWith(folder[F]) ++ Stream.emit(Print(",")) ++ Stream.emit(
-                Newline)
-            ),
+            .evalMap(j =>
+              Sync[F].delay {
+                j.foldWith(folder[F]) ++ Stream.emit(Print(",")) ++ Stream.emit(
+                  Newline)
+              }
+            ).flatMap(identity),
           Stream.emits(List(
             Trim,
             Unindent,
@@ -95,19 +99,4 @@ object DiffablePrinter extends IOApp {
 
   def print(j: Json) = j.foldWith(folder[IO])
 
-  override def run(args: List[String]): IO[ExitCode] = {
-    go(
-      print(
-        Json.arr(
-          Json.arr(Json.Null),
-          Json.arr((1 to 10).map(Json.fromInt): _*),
-          Json.obj(
-            "a" -> Json.fromString("aaa"),
-            "b" -> Json.obj(
-              "hello" -> Json.fromString("world")
-            )
-          )
-        )
-      )).compile.toList.map(r => println(r)).as(ExitCode.Success)
-  }
 }

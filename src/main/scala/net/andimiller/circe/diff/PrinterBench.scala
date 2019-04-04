@@ -26,12 +26,78 @@ class PrinterBench {
     val string = DiffablePrinter
       .go(DiffablePrinter.print(json))
       .compile
-      .last
+      .toList
       .unsafeRunSync()
-      .get
-      .buffer
   }
 
+  @Benchmark
+  def myListParser(): Unit = {
+    val json =
+      Json.arr(
+        Json.arr(Json.Null),
+        Json.arr((1 to 10).map(Json.fromInt): _*),
+        Json.obj(
+          "a" -> Json.fromString("aaa"),
+          "b" -> Json.obj(
+            "hello" -> Json.fromString("world")
+          )
+        )
+      )
+    val string = DiffablePrinterLists
+      .go(DiffablePrinterLists.print(json))
+  }
+
+  @Benchmark
+  def myListAndMutableParser(): Unit = {
+    val json =
+      Json.arr(
+        Json.arr(Json.Null),
+        Json.arr((1 to 10).map(Json.fromInt): _*),
+        Json.obj(
+          "a" -> Json.fromString("aaa"),
+          "b" -> Json.obj(
+            "hello" -> Json.fromString("world")
+          )
+        )
+      )
+    val string = DiffablePrinterListsAndBuilder
+      .go(DiffablePrinterListsAndBuilder.print(json))
+  }
+
+  @Benchmark
+  def myIterableAndMutableParser(): Unit = {
+    val json =
+      Json.arr(
+        Json.arr(Json.Null),
+        Json.arr((1 to 10).map(Json.fromInt): _*),
+        Json.obj(
+          "a" -> Json.fromString("aaa"),
+          "b" -> Json.obj(
+            "hello" -> Json.fromString("world")
+          )
+        )
+      )
+    val string = DiffablePrinterIteratorAndBuilder
+      .go(DiffablePrinterIteratorAndBuilder.print(json))
+  }
+
+  @Benchmark
+  def myListAndMutableWithSizingPrinter(): Unit = {
+    val json =
+      Json.arr(
+        Json.arr(Json.Null),
+        Json.arr((1 to 10).map(Json.fromInt): _*),
+        Json.obj(
+          "a" -> Json.fromString("aaa"),
+          "b" -> Json.obj(
+            "hello" -> Json.fromString("world")
+          )
+        )
+      )
+    val string = DiffablePrinterListsAndBuilderWithSizing
+      .go(DiffablePrinterListsAndBuilderWithSizing.print(json))
+  }
+  /*
   @Benchmark
   def circe(): Unit = {
     val json =
@@ -47,5 +113,6 @@ class PrinterBench {
       )
     val string = json.spaces2
   }
+  */
 
 }
